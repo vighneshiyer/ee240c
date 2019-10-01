@@ -1,0 +1,4 @@
+*.log
+*.aux
+*_minted*
+*.ipynb_checkpoints
