@@ -112,7 +112,7 @@ The optimal point is at $B_b = 6$ and $B_t = 6$.
   \end{center}
 \end{enumerate}
 
-\section*{Flash ADC}
+\subsection*{Problem 3: Flash ADC}
 
 6-bit flash ADC with ideal resistor string and $V_{ref} = 1.8$V. $\sigma_{offset} = 3$ mV. First and last preamp have no offset.
 
@@ -159,5 +159,12 @@ The optimal point is at $B_b = 6$ and $B_t = 6$.
     The effective offset of the preamps is divided by the interpolation factor, so both $\sigma_{INL}$ and $\sigma_{DNL}$ should be reduced by 4x.
 \end{enumerate}
 
-\section*{kT/C Noise}
+\subsection*{Problem 4: kT/C Noise}
+
+\begin{align*}
+  C &= 12 kT \left( \frac{2^B}{V_{FS}} \right)^2 \\
+  2.2 R C &= \frac{1}{2 f_s} \\
+  V_{FS} &= \sqrt{2 f_s \cdot 2.2R \cdot 12 kT \cdot 2^{B^2}} \\
+  \overline{V_{n}^2} &= \frac{k T}{C} = \frac{2 f_s \cdot 2.2R \cdot 12 kT}{12}
+\end{align*}
 \end{document}
