@@ -1,0 +1,42 @@
+// switch simulation
+include  "/share/instsww/cadence/GPDK_PKG/gpdk045_v_5_0/models/spectre/gpdk045_mos.scs" section=tt
+include  "/share/instsww/cadence/GPDK_PKG/gpdk045_v_5_0/models/spectre/gpdk045_mos.scs" section=tt_lvt
+
+global gnd
+
+parameters
++ VDD = 1.0
++ VIN_DC = VDD/2
++ VIN_AMPL = VDD/8
++ TSAMPLE = 100n
++ NUM_POINTS = 16384
++ NUM_PERIODS = 511
++ VIN_FREQ = NUM_PERIODS/TSAMPLE/NUM_POINTS
++ TSTAB = NUM_POINTS/4*TSAMPLE
++ TTRAN = NUM_POINTS*TSAMPLE + TSTAB - TSAMPLE
++ C = 10p
++ L = 40e-9
++ WN = 5e-6
++ WP = 10e-6
+
+vdd (vdd gnd) vsource dc=VDD
+vin (n1 gnd) vsource type=sine dc=VIN_DC ampl=VIN_AMPL freq=VIN_FREQ
+mn (n1 vdd n2 gnd) g45n1lvt M=10 w=WN l=L
+mp (n1 gnd n2 vdd) g45p1lvt M=10 w=WP l=L
+c (n2 gnd) capacitor c=C
+
+save mn:oppoint mp:oppoint
+
+# --- YOUR SIMULATION STATEMENT BEGINS HERE ---
+# dc dc oppoint=rawfile ...
+# --- YOUR SIMULATION STATEMENT ENDS HERE ---
+
+## --- BEGIN UNCOMMENT FOR PART D - OPTION 1 ---
+# tran_single tran stop=TTRAN errpreset=conservative skipstart=0 strobeperiod=TSAMPLE
+## --- END UNCOMMENT FOR DEBUG D - OPTION 1 ---
+
+## --- BEGIN UNCOMMENT FOR PART D - OPTION 2 ---
+# sweep sweep param=NUM_PERIODS values=[511 255 127 63] {
+#   tran tran stop=TTRAN errpreset=conservative skipstart=0 strobeperiod=TSAMPLE
+# }
+## --- END UNCOMMENT FOR PART D - OPTION 2---
