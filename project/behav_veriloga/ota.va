@@ -1,0 +1,133 @@
+// ota.h
+//
+// Author: Johan Vanderhaegen (jpv@eecs.berkeley.edu)
+
+
+`include "constants.vams"
+`include "discipline.vams"
+
+
+// ota(out_p, out_n, in_p,in_n,cmfb_ref,cmfb,vdd,vss)
+// 
+// fully differential OTA
+// 
+// Terminals:
+//   out_p    : positive output terminal
+//   out_n    : negative output terminal
+//   in_p     : positive input terminal
+//   in_n     : negative input terminal
+//   cmfb_ref : common mode feedback reference
+//   cmfb     : common mode feedback
+//   vdd      : positive supply node
+//   vss      : negative supply node
+// 
+// Parameters (differential half-circuit):
+//   gm       = transconductance of OTA
+//   gmoverid = transconductance / maximum differential current
+//   ft       = gm/2/pi/cin
+//   gbw      = gm/2/pi/cout
+//   gain     = gm/go
+//   vsat     = saturation voltage of output
+//   offset   = offset
+//   nf       = 
+//   kf       = flicker noise corner frequency in Hz
+// 
+// Description:
+// 
+
+
+module ota(out_p,out_n,in_p,in_n,cmfb_ref,cmfb,vdd,vss);
+   
+   // interface
+   
+   input in_p,in_n,cmfb;
+   output out_p,out_n,cmfb_ref;
+   inout  vdd,vss;
+   
+   electrical in_p,in_n,out_p,out_n,vdd,vss,cmfb_ref,cmfb;
+   
+   parameter real gm = 1m from (0:inf);
+   parameter real gmoverid = 10 from(0:inf);
+   
+   parameter real ft = 1G from (0:inf);
+   parameter real gbw = 1G from (0:inf);
+   
+   parameter real gain = 1000 from (0:inf);
+   parameter real vsat = 100m from (0:inf);
+   
+   parameter real offset = 0m;
+   parameter real nf = 1 from [0:inf);
+   parameter real kf = 0 from [0:inf);
+   
+   
+   // implementation
+   
+   real      cin;               // input capacitance (diff half-circuit)
+   real      cout;              // output capacitance (diff half-circuit)
+   real      gout;              // output conductance (diff half-circuit)
+   
+   real      sat1;              // output saturation parameters
+   real      sat2;
+   
+   real      Siw;
+   
+   real      vid;              // diff half-circuit input voltage
+   real      id;               // dm output current
+   real      ic;               // cm output current
+   
+   
+   analog begin
+      
+      // initialisation
+      cin = gm/`M_TWO_PI/ft;
+      cout = gm/`M_TWO_PI/gbw;
+      gout = gm/gain;
+      sat1 = sqrt(2)-1;
+      sat2 = gain-1;
+      Siw = nf*4*`P_K*$temperature*gm;
+      
+      // input capacitance
+      I(in_p,in_n) <+ cin*ddt(V(in_p,in_n))/2;
+      
+      // differential transconductance with slewing
+      vid = (V(in_p,in_n)+offset)/2;
+      if( abs(vid) > 1/gmoverid )
+        id = vid/abs(vid)* gm*1/gmoverid;
+      else
+        id = gm*vid;
+      I(out_n,out_p) <+ id;
+      I(out_n,out_p) <+ white_noise(Siw/2,"inw");
+      I(out_n,out_p) <+ flicker_noise(kf*Siw/2,1,"inf");
+      
+      // common mode feedback
+      V(cmfb_ref,vss) <+ V(vdd,vss)/4;
+      I(cmfb,cmfb_ref) <+ 2*cin*ddt(V(cmfb,cmfb_ref));
+      ic = gm*V(cmfb,cmfb_ref);
+      I(out_p,vss) <+ ic;
+      I(out_n,vss) <+ ic;
+      
+      // linear out_put conductane & capacitance
+      I(out_p,vss) <+ gout/2*V(out_p,vss) + cout/2*ddt(V(out_p,vss));
+      I(out_n,vss) <+ gout/2*V(out_n,vss) + cout/2*ddt(V(out_n,vss));
+      I(out_p,vdd) <+ gout/2*V(out_p,vdd) + cout/2*ddt(V(out_p,vdd));
+      I(out_n,vdd) <+ gout/2*V(out_n,vdd) + cout/2*ddt(V(out_n,vdd));
+      
+      // output saturation
+      //
+      // increases g_o by 'gout*sat1' at 2*vsat from vdd/vss
+      // increases g_o by 'gout*sat2' at vsat from vdd/vss
+      //
+      // uses 'limexp' to aide simulator convergence
+      //
+      I(out_p,vss) <+ -gout*sat1*vsat/ln(sat2/sat1) *
+        limexp(-(V(out_p,vss)/vsat-2)*ln(sat2/sat1));
+      I(out_n,vss) <+ -gout*sat1*vsat/ln(sat2/sat1) *
+        limexp(-(V(out_n,vss)/vsat-2)*ln(sat2/sat1));
+      I(vdd,out_p) <+ -gout*sat1*vsat/ln(sat2/sat1) *
+        limexp(-(V(vdd,out_p)/vsat-2)*ln(sat2/sat1));
+      I(vdd,out_n) <+ -gout*sat1*vsat/ln(sat2/sat1) *
+        limexp(-(V(vdd,out_n)/vsat-2)*ln(sat2/sat1));
+      
+   end
+   
+endmodule // ota

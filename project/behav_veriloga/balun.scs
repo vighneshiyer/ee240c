@@ -1,0 +1,29 @@
+// balun.scs
+
+
+simulator lang=spectre
+
+
+// balun (d c p n gnd)
+//
+// a bidirectional balanced-unbalanced converter
+//
+// Terminals:
+//   d   : differential mode signal
+//   c   : common mode signal
+//   p   : positive terminal of balanced signal
+//   n   : negative terminal of balanced signal
+//   gnd : ground terminal
+//
+// Parameters:
+//
+// Description:
+//   maps between the unbalanced signals 'd', 'c'
+//   and the balanced signals 'p','n'
+//
+
+
+subckt balun (d c p n gnd)
+  t1 (d gnd p c) transformer n1=2 n2=1
+  t2 (d gnd c n) transformer n1=2 n2=1
+ends balun

@@ -2,3 +2,4 @@
 *.aux
 *_minted*
 *.ipynb_checkpoints
+*.out

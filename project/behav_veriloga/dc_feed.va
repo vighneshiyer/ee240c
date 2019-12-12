@@ -1,0 +1,59 @@
+// dc_feed.va
+//
+// Author: Johan Vanderhaegen (jpv@eecs.berkeley.edu)
+
+
+`include "constants.vams"
+`include "discipline.vams"
+
+
+// dc_feed(a, b)
+//
+// DC feed
+//
+// Terminals:
+//   a : 
+//   b : 
+//
+// Parameters:
+//   rmin : minimum resistance during dc analysis
+//   gmin : minimum resistance during other analyses
+//
+// Description:
+//   Ideal short circuit during dc analysis.
+//   Ideal open circuit otherwise.
+//   'dc analysis' includes the dc analysis prior to ac/noise and
+//   prior to tran (for initial conditions).
+//   The short/open circuit can be made non-ideal (for convergence
+//   reasons).
+//
+
+
+module dc_feed(a, b);
+  
+  // interface
+  
+  inout a, b;
+  electrical a, b;
+  
+  parameter real gmin = 0.0 from [0:inf);
+  parameter real rmin = 0.0 from [0:inf);
+  
+  
+  // implementation
+  
+  electrical I_r;
+  
+  analog begin
+    
+    if( analysis("static") ) begin
+      I(I_r) <+ V(a,b) - 1.0e-6*rmin*V(I_r);
+      I(a,b) <+ 1.0e-6*V(I_r);
+    end else begin
+      I(I_r) <+ V(a,b) - 1.0e-6/max(gmin,1.0e-6)*V(I_r);
+      I(a,b) <+ gmin*V(a,b);
+    end
+    
+  end
+  
+endmodule // dc_feed
