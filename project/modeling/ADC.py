@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+import numpy as np
+
 class ADC:
     # levels = number of distinct digital code values
     # levels = 2**bits

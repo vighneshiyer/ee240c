@@ -8,6 +8,6 @@ class MDAC:
         self.step = (vrange[1] - vrange[0]) / (levels-1)
         self.gain = gain
 
-    def gen_output(self, adc_code: int, vin: float) -> float:
+    def gen_residual(self, adc_code: int, vin: float) -> float:
         equiv_voltage = adc_code*self.step + self.vrange[0]
-        return self.gain * (vin - equiv_voltage)
+        return -(self.gain * (vin - equiv_voltage))
