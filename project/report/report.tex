@@ -181,9 +181,74 @@ I'm neglecting the power required for the clock drivers and distribution.
 
 \subsection{Numbers}
 For a first cut design, we will consider a 12-bit pipeline ADC built out of 12 1.5 bps stages to accomodate comparator offset varitions.
-The noise of the ADC can be approximated as 
+\begin{align*}
+  P_{noise,adc} &\approx \frac{4kT}{C_s} \\
+  SNR &\approx \frac{(V_{DD} / sqrt{2})^2}{P_{noise,adc}} \\
+  C_s &\approx 73 \text{ fF}
+\end{align*}
 
 \section{Pipeline ADC Modeling}
 The pipeline ADC is modeled in Python using separate classes for the flash ADC and the MDAC, then combining those into a stage and stages into a pipeline.
+A few caveats were that each stage could only use a 1.2V supply and the input was single-ended.
+This meant the OTA's (+) terminal needed to be biased at midrail.
+The SAH stage was treated specially to produce a midrail-biased residual while the rest of the pipeline stages assumed that a midrail input voltage meant there was no residual left and values above and below the midrail were treated as positive and negative residuals.
 
+The first check is to make sure the quantization noise gave sufficient room for the additional thermal noise.
+The ADC was coherently sampled with $f_{in} = \frac{J}{N} f_s$ with $J = 1223$ and $N = 2^{12}$.
+This produced a spectrum with only quantization noise:
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figs/spectrum_quant_only.pdf}
+  \caption{FFT of ADC output only considering quantization noise}
+\end{figure}
+
+This spectrum had an SNDR of 74 dB, which is in line with the expected number.
+
+The next step was to add input referred thermal noise as calculated above per OTA stage.
+This noise was added in the time domain as normally distributed noise using the sampling cap value and the equations from the analysis section.
+\begin{align*}
+  g_{m1} &= g_{m3} = 118 \mu S \\
+  \overline{v^2_{n,samp}} &= 5.67e\text{-8} \quad V^2/Hz \\
+  \overline{v^2_{n,ota}} &= 3.72e\text{-16} \quad V^2/Hz \\
+  \overline{v^2_{n,ota,fb}} &= 1.02e\text{-6} \quad V^2/Hz \\
+  \overline{v^2_{n,tot}} &= 4.94e\text{-6} \quad V^2/Hz
+\end{align*}
+
+This results in a noise spectrum that is clearly larger than desired:
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.6\textwidth]{figs/spectrum_much_noise.pdf}
+  \caption{FFT of ADC output considering thermal noise of OTAs and sampling switches}
+\end{figure}
+with a SNDR of 51dB.
+
+Since this does not meet the spec, the knobs available for tuning are the per-stage gain, the sampling capacitance value, and the setting error.
+To recover the SNDR loss, the sampling capacitance of the first stage needs to be bumped up to 512 fF for an SNDR of 65 dB.
+To compensate for the excessive power draw of the first stage, the later stages have their capacitances scaled down by a 1.5x taper factor.
+
+The other modeled non-idealities were comparator offsets and capacitor mismatches.
+The comparator offset errors were handled by making the inter-stage gain smaller than full-scale, similar to the 1.5bps technique.
+This increases the number of required stages, but the additional stage consumes a modest amount of power and doesn't contribute much to noise.
+
+The capacitor mismatches were handled by measuring the analog gain of each OTA stage in isolation and using this gain when adding up the ADC codes to produce the final output.
+There is no significant power or noise issue introduced since the only source of additional noise are more switches around the OTA for out-of-band OTA testing.
+
+\subsection{Summary}
+\begin{table}[H]
+  \begin{center}
+    \caption{ADC Parameters}
+    \label{tab:adc_params}
+    \begin{tabular}{l l}
+      \toprule
+      \textbf{Parameter} & \textbf{Value} \\
+      \midrule
+      Bandwidth & $12.5$ MHz\\
+      Dynamic Range & 12 bits\\
+      Signal to Noise and Distortion Ratio & 65.2 dB \\
+      Power Consumption & 4 mW \\
+      Configuration & 3-3-3-3-3 with equal gains per stage and 1.5x $C_s$ taper \\
+      \bottomrule
+    \end{tabular}
+  \end{center}
+\end{table}
 \end{document}
